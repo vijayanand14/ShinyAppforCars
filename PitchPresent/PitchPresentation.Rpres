@@ -1,0 +1,76 @@
+
+========================================================
+author:
+date:
+autosize: true
+
+```{r echo=F, results='hide'}
+knitr::opts_chunk$set(echo=F)
+```
+
+# Analysis of mtcars Dataset
+
+
+## Authored by: Vijayanand
+
+
+Executive Summary
+========================================================
+
+
+## Analyse cars data to detect if some difference exists between gaz consumption of manual cars, or automatic ones.
+## For that, we'll use the data from mtcars which containing 11 measures for 32 cars from the years 73-74. In fact, when the car is light enough (~1000lb), manual transmission is initially at 16.8 mpg which is around 10 more than for automatic ones. However, when the weight increases, there is a decrease of the mpg of (around) -7 for the manual cars, and only -3 for the automatic ones. Thus, starting, with cars more than 3500lb, the automatic cars should be the choice of preference. As a side note, if we had only looked at mean within group we would have always preferred manual cars to automatic, but this is influenced by the fact that the dataset has a few number of lighter cars and all are automatic!
+.
+.
+.
+>**GitHub Repository link for the project:**
+<https://github.com/vijayanand14/ShinyAppforCars>.
+
+
+Analysis - Part 1
+========================================================
+
+### First of all we're going to load the data, `mtcars`, avaible in R's package `datasets`.
+### Then we'll head into to look at what it contains (and adapt the types if necessary).
+```{r size="footnotesize"}
+library(datasets)
+data(mtcars)
+mtcars$am <- factor(x=mtcars$am, labels=c("Automatic", "Manual"))
+head(mtcars)
+```
+### So there are `r dim(mtcars)[1]` observations of cars and `r dim(mtcars)[2]` measures.
+
+### We're interested in the role playing by the transmission (`am`) in the evolution of miles/gallon consumption (`mpg`). To see a visual interpretation of the relation between the two, a boxplot is available in the appendix. Still visualy, it looks like the difference between the two groups (manual and automatic transmissions) is true, let's see the mean of each first and then perform a between two-groups t-test (assuming normality and independence).
+
+
+Analysis - Part 2
+========================================================
+
+
+```{r}
+cars.auto <- mtcars[mtcars$am == "Automatic",]$mpg
+cars.manu <- mtcars[mtcars$am == "Manual",]$mpg
+tt <- t.test(cars.manu, cars.auto)
+
+mean.manu <- tt$estimate[1]
+mean.auto <-tt$estimate[2]
+```
+### The difference between both is significant (p-value `r tt$p.value`) and the 95% confidence interval doesn't contains 0, and thus, at this stage, we can say that the manual cars are better than automatic cars from `r tt$conf.int[1]` to `r tt$conf.int[2]` miles per galon. However, using the transmission alone is not enough to quantify the difference for specific cases. To see that, we can look at the prediction of mile per gallon using the single transmission independent variable in a linear regression.
+```{r}
+fit.am <- lm(mpg ~ am, data=mtcars)
+fit.am.sy <- summary(fit.am)
+```
+### So the relation between the to is rather clear, with p-value of the change being `r coef(fit.am.sy)[2, 4]`. However, the variance explained is quite low, with an `R²` at `r fit.am.sy$r.squared`. So something is missing in the mix.
+
+### In order to find another model explaining better the miles per gallon, we'll use the best model selection since our dataset is quite small. For the sake of sanity, models selected by the stepwise method (forward and backward) have been ran, and they were only diverging at the third variable selecting `hp` or `qsec`. To run these selections, we'll use the useful package `leaps`.
+
+
+Plot of mtcars dataset
+========================================================
+
+```{r fig.width=15, fig.height=12}
+plot(mtcars$am, mtcars$mpg, main = "Miles per gallon by transmission type", ylab="Miles per gallon")
+```
+
+
+
